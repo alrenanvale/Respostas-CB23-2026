@@ -29,7 +29,17 @@ from fornecido.cronometro import cronometrar
 #: dígitos) e `resto` (o restante da linha, começando por um caractere que não é espaço).
 #: As partes são separadas por um ou mais espaços. A linha inteira deve casar: o padrão é
 #: aplicado com `LINHA.fullmatch(linha)`.
-LINHA: re.Pattern = None  # type: ignore[assignment]  # TODO issue #1
+LINHA: re.Pattern = re.compile(r'''
+    (?P<data>\d{4}-\d{2}-\d{2})         # Data: AAAA-MM-DD, ano, mês e dia separados por hífen
+    [ ]+                                # Espaço para separar
+    (?P<hora>\d{2}:\d{2}:\d{2})         # Hora: HH:MM:SS, horas, minutos e segundos separados por dois pontos
+    [ ]+                                # Espaço para separar
+    (?P<nivel>INFO|WARN|ALARME)         # Nível: INFO, WARN ou ALARME
+    [ ]+                                # Espaço para separar
+    (?P<tag>[A-Z]{1,2}\d{1,3})          # Tag: tag com 1 ou 2 letras maiúsculas seguidas de 1 a 3 dígitos
+    [ ]+                                # Espaço para separar
+    (?P<resto>\S.*)                     # Resto: primeiro caractere diferente de espaço e os próximos, caso houverem, podem ser qualquer um (menos \n)
+''', re.VERBOSE)
 
 
 @dataclass(frozen=True)
