@@ -65,6 +65,21 @@ def valida_tag(s: str) -> bool:
     return _TAG.fullmatch(s) is not None
 
 
+def _converte_float(string: str) -> str | float:
+    """Converte uma string em float quando possível
+    
+    Retorna a string como float, se a conversão pode ser feita, ou retorna a mesma string
+    """
+    try:
+        return float(string)
+    except ValueError:
+        return string
+
+
+#: Compilando o patern para avaliar o grupo da linha do texto
+_PARES = re.compile(r'(\w+)=(\S+)')
+
+
 def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
     """Lê o texto do log e devolve `(registros, invalidas)`.
 
@@ -83,7 +98,34 @@ def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
       (`contagens=1623` vira `1623.0`; `evento=partida` continua `"partida"`);
     - texto vazio devolve `([], [])`.
     """
-    raise NotImplementedError("issue #1: ler_log")
+
+    invalidas, registros = [], []
+    pdr_data_hora = "%Y-%m-%d %H:%M:%S"         # Strimg que o datetime usará para avaliar se uma linha do log possui darta possível
+    texto_linhas = texto.split("\n")
+
+    for linha in texto_linhas:
+        if linha.strip() == "":
+            continue
+        casa_padrão = LINHA.fullmatch(linha)            # Testando se a linha casa com o padrão
+        if casa_padrão is None:
+            invalidas.append(linha)                     # Se a linha não casa com o padrão, ela deve ser adicionada como inválida (1)
+            continue
+        valores = _PARES.findall(casa_padrão["resto"])
+        if not valores:
+            invalidas.append(linha)
+            continue 
+        datahora = f'{casa_padrão["data"]} {casa_padrão["hora"]}'
+        try:
+            instante = datetime.strptime(datahora, pdr_data_hora)
+        except ValueError:
+            invalidas.append(linha)
+            continue
+        registros.append(Registro(instante, 
+                                  casa_padrão["nivel"],
+                                  casa_padrão["tag"],
+                                  {chave: _converte_float(valor) for chave, valor in valores }))
+
+    return (registros, invalidas)
 
 
 def por_tag(registros: list[Registro], tag: str) -> list[Registro]:
